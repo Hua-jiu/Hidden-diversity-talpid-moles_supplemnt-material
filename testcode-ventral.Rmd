@@ -39,12 +39,13 @@ library(patchwork) # For combining plots
 # 1.1 prepare data
 
 ```{r}
-# Set up file paths for Parascaptor ventral cranial images
+# Set working directory and define file paths for Parascaptor data
+setwd("/Users/anlong/Documents/同步空间/Project_Code/Project/mole_project/Hidden-diversity-talpid-moles_supplemnt-material")
 # Input directory containing original JPG images
-inpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Parascaptor_V_JPG")
+inpath <- file.path("./geometric morphometrics/Parascaptor_V_JPG")
 
 # Output directory for separated individual specimens
-outpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Parascaptor_V_JPG_OUT")
+outpath <- file.path("./geometric morphometrics/Parascaptor_V_JPG_OUT")
 
 # Separate individual specimens from batch images (already completed)
 # outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
@@ -160,11 +161,11 @@ calibration_results$gg +
   # X-axis "limits" already handled by scale_x_discrete
   coord_cartesian(ylim = c(90, 100)) +
 
-  ggtitle("EFA 谐波功率校准 (Harmonics 1-20)") +
+  ggtitle("Calibration of EFA Harmonic Power (Harmonics 1–20)") +
   labs(
-    x = "谐波 (Harmonic)",
-    y = "累积功率 (Cumulative Power %)"
-  ) +
+    x = "Harmonic Number",
+    y = "Cumulative Power (%)"
+  )
 
   # Add red dashed line at 99.9% as reference
   geom_hline(yintercept = 99.9, linetype = "dashed", color = "red")
@@ -195,7 +196,7 @@ bot.p$fac$species <- as.factor(bot.p$fac$species)
 
 # Define custom color palette for consistent visualization
 # Automatic palette
-palette <- c("
+palette <- c("#636EFA", "#EF553B", "#00CC96")
 # Custom blue, red, green palette
 
 # Extract PCA scores and add species information
@@ -457,7 +458,7 @@ print(cva_plot_hull)
 # 1.5 save 
 ```{r}
 # Save current workspace with Parascaptor analysis results
-save.image(file = "Parascaptor_skull_ventral.RData")
+save.image(file = "./geometric_morphometrics/R_Data/Parascaptor_skull_ventral.RData")
 ```
 
 
@@ -465,12 +466,12 @@ save.image(file = "Parascaptor_skull_ventral.RData")
 # 2.1 Euroscaptor Ventral Cranial Analysis
 
 ```{r}
-# Set working directory and define file paths for Euroscaptor data
-# setwd("F:/GM/")
+# Set working directory and define file paths for Parascaptor data
+setwd("/Users/anlong/Documents/同步空间/Project_Code/Project/mole_project/Hidden-diversity-talpid-moles_supplemnt-material")
 # Input directory containing Euroscaptor ventral cranial JPG images
-inpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Euroscaptor_V_JPG")
+inpath <- file.path("./geometric_morphometrics/Euroscaptor_V_JPG")
 # Output directory for processed individual specimens
-outpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Euroscaptor_V_JPG_OUT")
+outpath <- file.path("./geometric_morphometrics/Euroscaptor_V_JPG_OUT")
 
 # Separate individual specimens from batch images (already completed)
 # outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
@@ -827,7 +828,7 @@ print(cva_plot_hull)
 
 ```{r}
 # Save current workspace containing both Parascaptor and Euroscaptor analyses
-save.image(file = "Euroscaptor_skull_ventral.RData")
+save.image(file = "./geometric_morphometrics/R_Data/Euroscaptor_skull_ventral.RData")
 ```
 
 # Analysis Complete
