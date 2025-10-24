@@ -12,7 +12,7 @@ require("outlineR") # For outline extraction and processing
 require("geomorph") # For geometric morphometrics
 require("Momocs") # For outline-based morphometric analysis
 require("shapes") # For shape analysis
-require("tibble") # For data manipulation
+require("tibble") # For data manipulationclea
 library(plotly) # For interactive 3D plotting
 library(Morpho) # For morphometric computations
 library(ggfortify) # For ggplot2 extensions
@@ -20,19 +20,16 @@ library(dplyr) # For data manipulation
 library(patchwork) # For combining plots
 
 # Display color palette for visualization
-pal_qual_Paired(9) %>% barplot(rep(1, 9), col = .)
+# pal_qual_Paired(9) %>% barplot(rep(1, 9), col = .)
 ```
 
 # 3. Load Previous Analysis Results
 ```{r}
-# 加载包含Parascaptor颅骨腹面分析数据的工作空间
 # Load the saved workspace containing Parascaptor cranial ventral analysis data
-load(file = "F:/GM/Parascaptor_skull_ventral.RData")
+# load(file = "F:/GM/Parascaptor_skull_ventral.RData")
 
-# 备选方案：加载Euroscaptor数据（注释掉以避免覆盖变量）
 # Alternative: load Euroscaptor data (commented out to avoid overwriting)
 # load(file = "F:/GM/Euroscaptor_skull_ventral.RData")
-# 注意：两个文件的对象名称相同，同时加载会覆盖变量，使用时需谨慎
 # Note: Object names are identical between files, so loading both simultaneously
 # would overwrite variables. Use caution when working with multiple datasets.
 ```
@@ -42,159 +39,124 @@ load(file = "F:/GM/Parascaptor_skull_ventral.RData")
 # 1.1 prepare data
 
 ```{r}
-# 为Parascaptor腹面颅骨图像设置文件路径
 # Set up file paths for Parascaptor ventral cranial images
-# 包含原始JPG图像的输入目录
 # Input directory containing original JPG images
-inpath <- file.path("F:/GM/Parascaptor_V_JPG")
+inpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Parascaptor_V_JPG")
 
-# 分离后单个标本的输出目录
 # Output directory for separated individual specimens
-outpath <- file.path("F:/GM/Parascaptor_V_JPG_OUT")
+outpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Parascaptor_V_JPG_OUT")
 
-# 从批量图像中分离单个标本（已完成）
 # Separate individual specimens from batch images (already completed)
 # outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
 
-# 从处理过的图像中提取轮廓
 # Extract outlines from processed images
-# tps_file_rescale = NULL 表示不使用TPS文件的缩放信息
 # tps_file_rescale = NULL means no scaling information from TPS files
 outlines <- outlineR::get_outlines(outpath = outpath, tps_file_rescale = NULL)
 
-# 将单个轮廓文件合并为一个Momocs对象
 # Combine individual outline files into a single Momocs object
 outlines_combined <- outlineR::combine_outlines(single_outlines_list = outlines)
 
 
-# 显示所有轮廓叠加在一起以检查对齐问题
 # Display all outlines stacked on top of each other to check for alignment issues
-stack(outlines_combined) # 显示所有轮廓叠加（考虑先进行居中/缩放）
+stack(outlines_combined)
 # Shows all outlines overlaid (consider centering/scaling first)
 
-# 在网格面板中显示所有轮廓以进行单独检查
 # Display all outlines in a panel grid for individual inspection
-Momocs::panel(outlines_combined) # 在网格中分别显示每个轮廓
+Momocs::panel(outlines_combined)
 # Shows each outline separately in a grid
 
-# 为形态测量学分析处理轮廓
 # Process outlines for morphometric analysis
 outlines_combined2 <- outlines_combined %>%
-  coo_center() %>% # 将所有轮廓居中到原点(0,0)
+  coo_center() %>%
   # Center all outlines at origin (0,0)
-  coo_sample(150) %>% # 重新采样到150个点以标准化
+  coo_sample(150) %>%
   # Resample to 150 points for standardization
-  coo_scale() %>% # 缩放到单位大小以进行形状比较
+  coo_scale() %>%
   # Scale to unit size for shape comparison
-  coo_alignxax() %>% # 沿x轴对齐以保持一致的方向
+  coo_alignxax() %>%
   # Align along x-axis for consistent orientation
-  coo_slidedirection("right") # 确保所有标本朝右
+  coo_slidedirection("right")
 # Ensure all specimens face right
 
-# 在面板视图中显示处理过的轮廓
 # Display processed outlines in panel view
 Momocs::panel(outlines_combined2)
 
-# 显示叠加的处理轮廓以验证一致的方向
 # Display processed outlines stacked to verify consistent orientation
 stack(outlines_combined2)
 
-# 创建原始轮廓与处理轮廓的并排比较
 # Create side-by-side comparison of original vs processed outlines
-# 清除可能导致错误的冲突变量名
 # Clear any conflicting variable names that might cause errors
 if (exists("names") && is.character(get("names"))) rm(names)
 
-# 设置双面板图形布局进行比较
 # Set up two-panel plot layout for comparison
 par(mfrow = c(1, 2))
-# 左面板：原始轮廓（保留标本间的大小差异）
 # Left panel: original outlines (preserving size differences between specimens)
 outlines_combined %>%
-  coo_center() %>% # 居中轮廓但保持大小差异
+  coo_center() %>%
   # Center outlines while preserving size differences
   stack(title = "Original (with size)")
-# 右面板：处理轮廓（标准化用于形状分析）
 # Right panel: processed outlines (standardized for shape analysis)
 outlines_combined2 %>%
-  coo_rotate(pi) %>% # 旋转180度以更好地匹配方向
+  coo_rotate(pi) %>%
   # Rotate 180 degrees for better orientation match
   stack(title = "Processed (scaled)")
 
-# 提取和处理标本名称以进行分类学分类
 # Extract and process specimen names for taxonomic classification
 sample_names <- names(outlines_combined2)
 
-# 用"#"分隔符拆分标本名称以分离分类学信息
 # Split specimen names by "#" delimiter to separate taxonomic information
 split_list <- strsplit(sample_names, "#")
 
-# 提取前三个组件（属、种、凭证号）
 # Extract first three components (genus, species, voucher number)
 first_three <- lapply(split_list, function(x) x[1:3])
 
-# 转换为矩阵格式以便更容易操作
 # Convert to matrix format for easier manipulation
 names_matrix <- do.call(rbind, first_three)
 
-# 标准化种名以保持一致性
 # Standardize species names for consistency
-names_matrix <- gsub("Parascaptor sp1", "sp1", names_matrix) # 简化种1名称
+names_matrix <- gsub("Parascaptor sp1", "sp1", names_matrix)
 # Simplify species 1 name
-names_matrix <- gsub("Parascaptor sp2", "sp2", names_matrix) # 简化种2名称
+names_matrix <- gsub("Parascaptor sp2", "sp2", names_matrix)
 # Simplify species 2 name
 
-# 向矩阵添加列名
 # Add column names to the matrix
 colnames(names_matrix) <- c("genus", "species", "voucher")
 
-# 转换为tibble（现代数据框）以便更容易处理
 # Convert to tibble (modern data frame) for easier handling
 names_tibble <- as_tibble(names_matrix)
 
-# 将分类学信息作为因子添加到轮廓对象
 # Add taxonomic information as factors to the outline object
 outlines_combined2$fac <- names_tibble
 ```
 
 # 1.2. Elliptical Fourier Analysis PCA
 ```{r}
-# 检查第一个标本的傅里叶变换质量
 # Check Fourier transform quality for the first specimen
-coo_oscillo(outlines_combined2[1], "efourier") # 绘制谐波功率谱
+coo_oscillo(outlines_combined2[1], "efourier")
 # Plot harmonic power spectrum
 
-# 显示第一个标本的傅里叶系数
 # Display Fourier coefficients for the first specimen
-Ptolemy(outlines_combined2[1]) # 可视化系数贡献
+Ptolemy(outlines_combined2[1])
 # Visualize coefficient contributions
 
-# 校准椭圆傅里叶分析的谐波功率，测试最多20个谐波
 # Calibrate harmonic power for Elliptic Fourier Analysis, testing up to 20 harmonics
 calibration_results <- calibrate_harmonicpower_efourier(outlines_combined2, nb.h = 20)
 
-# 显示校准结果中的最小谐波数
 # Show minimum harmonics from calibration results
 calibration_results$minh
 
-# 关键：创建正确的谐波顺序 (h2, h3, ..., h16)
 # Critical: Create correct harmonic sequence (h2, h3, ..., h16)
-# 使用paste0动态生成字符向量
 # Use paste0 to dynamically generate character vector
 correct_order <- paste0("h", 2:16)
 
-# 使用ggplot2自定义并展示校准绘图
 # Use ggplot2 to customize and display calibration plot
 calibration_results$gg +
   theme_bw() +
 
-  # 使用scale_x_discrete并提供'limits'来强制正确的数字顺序
   # Use scale_x_discrete with 'limits' to force correct numerical order
   scale_x_discrete(limits = correct_order) +
 
-  # 在coord_cartesian中只设置ylim（Y轴）
   # Set only ylim (Y-axis) in coord_cartesian
-  # X轴的"limits"已经由scale_x_discrete处理
   # X-axis "limits" already handled by scale_x_discrete
   coord_cartesian(ylim = c(90, 100)) +
 
@@ -204,86 +166,68 @@ calibration_results$gg +
     y = "累积功率 (Cumulative Power %)"
   ) +
 
-  # 在99.9%处添加一条红色虚线作为参考
   # Add red dashed line at 99.9% as reference
   geom_hline(yintercept = 99.9, linetype = "dashed", color = "red")
 
 
-# 对所有标本执行椭圆傅里叶分析（EFA）
 # Perform Elliptic Fourier Analysis (EFA) on all specimens
-# smooth.it = 1：最小平滑，nb.h = 14：使用14个谐波
 # smooth.it = 1: minimal smoothing, nb.h = 14: use 14 harmonics
 bot.f <- efourier(outlines_combined2, smooth.it = 1, nb.h = 14)
 
-# 显示EFA结果摘要
 # Display EFA results summary
 bot.f
 
-# 创建箱线图以可视化系数分布（删除第一个谐波）
 # Create boxplot to visualize coefficient distributions (drop first harmonic)
 boxplot(bot.f, drop = 1)
 
-# 对傅里叶系数执行主成分分析
 # Perform Principal Component Analysis on Fourier coefficients
 bot.p <- PCA(bot.f)
 
-# 检查PCA对象的类别
 # Check the class of PCA object
 class(bot.p)
 
-# 为2D可视化准备数据
 # Prepare data for 2D visualization
-# 创建物种可视化的颜色调色板
 # Create color palette for species visualization
-# pal_qual_Paired(9) %>% barplot(rep(1, 9), col=.)  # 显示可用颜色
 # Display available colors
 
-# 将物种数据转换为因子以便正确分组
 # Convert species data to factor for proper grouping
 bot.p$fac$species <- as.factor(bot.p$fac$species)
 
-# 定义一致可视化的自定义颜色调色板
 # Define custom color palette for consistent visualization
-# palette <- pal_qual_Paired(length(levels(bot.p$fac$species)))  # 自动调色板
 # Automatic palette
-palette <- c("#636EFA", "#EF553B", "#00CC96") # 自定义蓝、红、绿调色板
+palette <- c("
 # Custom blue, red, green palette
 
-# 提取PCA得分并添加物种信息
 # Extract PCA scores and add species information
-pca_scores <- as.data.frame(bot.p$x) # 获取每个标本的PC坐标
+pca_scores <- as.data.frame(bot.p$x)
 # Get PC coordinates for each specimen
-pca_scores$species <- bot.p$fac$species # 添加物种标签
+pca_scores$species <- bot.p$fac$species
 # Add species labels
 
-# 为每个物种组计算凸包以显示聚类
 # Calculate convex hulls for each species group to show clustering
 pca_hull_data <- pca_scores %>%
-  group_by(species) %>% # 按物种分组
+  group_by(species) %>%
   # Group by species
-  do(hull = .[chull(.$PC1, .$PC2), ]) # 找到凸包顶点
+  do(hull = .[chull(.$PC1, .$PC2), ])
 # Find convex hull vertices
 
-# 将凸包数据转换为适合绘图的数据框格式
 # Convert hull data to proper data frame format for plotting
 pca_hull_data <- bind_rows(pca_hull_data$hull)
 
-# 创建带有物种特异性着色和凸包的PCA散点图
 # Create PCA scatter plot with species-specific coloring and convex hulls
 pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
-  geom_point(size = 3) + # 将单个标本绘制为点
+  geom_point(size = 3) +
   # Plot individual specimens as points
-  # 添加显示物种聚类的半透明多边形
   # Add semi-transparent polygons showing species clusters
   geom_polygon(
     data = pca_hull_data, aes(x = PC1, y = PC2, group = species, fill = species),
     alpha = 0.2, color = NA
   ) +
-  scale_color_manual(values = palette) + # 对点应用自定义颜色
+  scale_color_manual(values = palette) +
   # Apply custom colors to points
-  scale_fill_manual(values = palette) + # 对多边形应用自定义颜色
+  scale_fill_manual(values = palette) +
   # Apply custom colors to polygons
-  theme_minimal() + # 清洁的绘图主题
+  theme_minimal() +
   # Clean plot theme
   labs(
     title = "PCA of Fourier-transformed cranial outlines",
@@ -291,86 +235,75 @@ pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
     y = "Principal Component 2"
   )
 
-# 显示PCA图形
 # Display PCA plot
 pca_plot
 ```
+
+
 # 1.3 Parascaptor Elliptical Fourier Analysis CVA
 ```{r}
-# 典型变量分析（CVA）用于监督分类
 # Canonical Variate Analysis (CVA) for supervised classification
-# CVA在最小化组内方差的同时最大化组间方差
 # CVA maximizes between-group variance while minimizing within-group variance
 bot.cva <- CVA(bot.f$coe, bot.f$fac$species)
 
-# 提取CVA得分（典型空间中的坐标）
 # Extract CVA scores (coordinates in canonical space)
 cva_scores <- bot.cva$CVscores
 
-# 创建包含CVA坐标和物种信息的数据框
 # Create data frame with CVA coordinates and species information
 df <- data.frame(
-  CV1 = cva_scores[, 1], # 第一典型变量
+  CV1 = cva_scores[, 1],
   # First canonical variate
-  CV2 = cva_scores[, 2], # 第二典型变量
+  CV2 = cva_scores[, 2],
   # Second canonical variate
-  #  CV3 = cva_scores[,3],  # 第三典型变量（注释掉）
   # Third canonical variate (commented out)
-  #  CV4 = cva_scores[,4],  # 第四典型变量（注释掉）
   # Fourth canonical variate (commented out)
-  species = bot.f$fac$species # 物种标签
+  species = bot.f$fac$species
   # Species labels
 )
 
-# 转换为tibble以进行现代数据操作
 # Convert to tibble for modern data manipulation
 df_tbl <- as_tibble(df)
 
-# 在CVA空间中为物种组计算凸包
 # Calculate convex hulls for species groups in CVA space
 hull_data <- df_tbl %>%
-  group_by(species) %>% # 按物种分组
+  group_by(species) %>%
   # Group by species
-  do(hull = .[chull(.$CV1, .$CV2), ]) # 找到凸包顶点
+  do(hull = .[chull(.$CV1, .$CV2), ])
 # Find convex hull vertices
-# 将凸包数据转换为适当的数据框格式
 # Convert hull data to proper data frame format
 hull_data <- bind_rows(hull_data$hull)
 
-# 创建带有物种聚类的CVA散点图
 # Create CVA scatter plot with species clustering
 cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
-  geom_point(size = 3) + # 将标本绘制为彩色点
+  geom_point(size = 3) +
   # Plot specimens as colored points
-  # 添加半透明的物种组多边形
   # Add semi-transparent species group polygons
   geom_polygon(
     data = hull_data, aes(x = CV1, y = CV2, group = species, fill = species),
     alpha = 0.2, color = NA
   ) +
-  scale_color_manual(values = palette) + # 应用自定义点颜色
+  scale_color_manual(values = palette) +
   # Apply custom point colors
-  scale_fill_manual(values = palette) + # 应用自定义填充颜色
+  scale_fill_manual(values = palette) +
   # Apply custom fill colors
-  theme_minimal() + # 清洁的绘图主题
+  theme_minimal() +
   # Clean plot theme
   labs(
-    title = "CVA of Parascaptor species", # 当前分析的更新标题
+    title = "CVA of Parascaptor species",
     # Updated title for current analysis
     x = "Canonical Variate 1",
     y = "Canonical Variate 2"
   ) +
   theme(
-    # 自定义网格线以改善可视化
     # Customize grid lines for better visualization
     panel.grid.major = element_line(color = "gray", size = 0.5),
-    panel.grid.minor = element_blank(), # 移除次要网格线
+    panel.grid.minor = element_blank(),
     # Remove minor grid lines
     panel.grid.major.x = element_line(color = "gray", size = 0.5, linetype = "dotted"),
     panel.grid.major.y = element_line(color = "gray", size = 0.5, linetype = "dotted"),
-    panel.background = element_blank(), # 移除面板背景
+    panel.background = element_blank(),
     # Remove panel background
-    plot.background = element_blank() # 移除绘图背景
+    plot.background = element_blank()
     # Remove plot background
   )
 
@@ -378,94 +311,73 @@ cva_plot
 ```
 
 
-
 # 1.4 Landmark-based Geometric Morphometric Analysis
 ```{r}
-# 测试基于标志点的分析方法作为轮廓分析的替代方案
 # Test landmark analysis approach as alternative to outline analysis
-pile(outlines_combined2) # 显示叠加轮廓以评估标志点放置
+pile(outlines_combined2)
 # Display outlines stacked for landmark placement assessment
 
 
-# 对标志点数据执行完整的广义Procrustes分析
 # Perform full Generalized Procrustes Analysis on landmark data
-# 这会对齐、缩放和旋转标本以最小化形状差异
 # This aligns, scales, and rotates specimens to minimize shape differences
 outlines_150pts <- coo_sample(outlines_combined2, 150)
 
-# 执行广义Procrustes分析
 # Perform Generalized Procrustes Analysis
 w.al <- fgProcrustes(outlines_150pts)
 
 
-# 显示以第一个标本为参考的对齐标本
 # Display aligned specimens with first specimen as reference
 w.al %>%
-  coo_slide(id = 1) %>% # 滑动以使用标本1作为参考对齐
+  coo_slide(id = 1) %>%
   # Slide to use specimen 1 as reference alignment
-  stack() # 叠加所有对齐标本以进行视觉检查
+  stack()
 # Stack all aligned specimens for visual inspection
 
-# 以叠加格式显示对齐标本
 # Display aligned specimens in stacked format
 pile(w.al)
 
-# 提取坐标矩阵并转换为适合PCA的格式
 # Extract coordinate matrices and convert to PCA-suitable format
-# 将每个标本的坐标矩阵转换为单个向量以进行多变量分析
 # Transform each specimen's coordinate matrix into a single vector for multivariate analysis
-all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat))) # 将矩阵转换为向量并转置
+all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat)))
 # Convert matrices to vectors and transpose
-combined_matrix <- do.call(rbind, all_matrices) # 将所有标本向量合并为分析矩阵
+combined_matrix <- do.call(rbind, all_matrices)
 # Combine all specimen vectors into analysis matrix
 
-# 提取标本元数据（物种信息）
 # Extract specimen metadata (species information)
 sample_info <- w.al[[2]]
 
-# 对Procrustes对齐的坐标数据执行主成分分析
 # Perform Principal Component Analysis on Procrustes-aligned coordinate data
 pca_result <- prcomp(combined_matrix, scale. = TRUE)
 
-# 将PCA结果与标本分类学信息整合
 # Integrate PCA results with specimen taxonomic information
 pca_data <- data.frame(pca_result$x, species = sample_info$species)
 
 
-# 在每组内找到能包围所有点的凸包点
 # Find convex hull points that enclose all points within each group
 hull_data <- pca_data %>%
   group_by(sample_info$species) %>%
   slice(chull(PC1, PC2))
 
-# 创建Procrustes对齐标志点坐标的PCA图
 # Create PCA plot of Procrustes-aligned landmark coordinates
 pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
 
-  # 步骤A：绘制散点（与之前的代码相同）
   # Step A: Plot scatter points (same as previous code)
   geom_point(aes(color = species), size = 3) +
 
-  # 步骤B：添加凸包多边形
   # Step B: Add convex hull polygons
-  # 'data = hull_data' -> 使用我们刚创建的凸包数据
   # 'data = hull_data' -> Use the convex hull data we just created
-  # 'aes(fill = species)' -> 让多边形的填充色也按物种匹配
   # 'aes(fill = species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> 设置为半透明
   # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> 移除多边形的外框线
   # 'color = NA' -> Remove polygon outline
   geom_polygon(
     data = hull_data,
     aes(fill = species, group = species),
     alpha = 0.2,
     color = NA,
-    show.legend = FALSE # 不需要多边形的图例（散点已经有了）
+    show.legend = FALSE
     # Don't need polygon legend (scatter points already have it)
   ) +
 
-  # 步骤C：添加标题和主题
   # Step C: Add title and theme
   labs(
     title = "PCA of Procrustes-aligned landmark coordinates",
@@ -474,78 +386,62 @@ pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
   ) +
   theme_minimal()
 
-# 可选：如果定义了'palette'变量，可以在这里添加
 # Optional: If 'palette' variable is defined, can add here:
 # scale_color_manual(values = palette) +
 # scale_fill_manual(values = palette)
 
-# 显示绘图
 # Display the plot
 print(pca_plot_procrustes)
 
 
-# 对标志点坐标数据进行典型变量分析
 # Canonical Variate Analysis on landmark coordinate data
-# CVA执行监督分类以最大化组间差异
 # CVA performs supervised classification to maximize between-group differences
 bot.cva <- CVA(combined_matrix, sample_info$species)
 
-# 提取典型变量得分（判别函数坐标）
 # Extract canonical variate scores (discriminant function coordinates)
 cva_scores <- bot.cva$CVscores
 
-# 创建包含所有典型变量和物种标签的综合数据框
 # Create comprehensive data frame with all canonical variates and species labels
 df <- data.frame(
-  CV1 = cva_scores[, 1], # 第一典型变量（主要判别轴）
+  CV1 = cva_scores[, 1],
   # First canonical variate (primary discrimination axis)
-  CV2 = cva_scores[, 2], # 第二典型变量（次要判别轴）
+  CV2 = cva_scores[, 2],
   # Second canonical variate (secondary discrimination axis)
-  Species = sample_info$species # 物种分类标签
+  Species = sample_info$species
   # Species classification labels
 )
 
-# 转换为tibble以进行现代数据操作
 # Convert to tibble for modern data manipulation
 df_tbl <- as_tibble(df)
 
 
-# 计算CVA空间中的凸包数据
 # Calculate convex hull data in CVA space
 cva_hull_data <- df_tbl %>%
   group_by(Species) %>%
   slice(chull(CV1, CV2))
 
-# 创建带凸包的CVA图
 # Create CVA plot with convex hulls
 cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
-  # 步骤A：绘制散点
   # Step A: Plot scatter points
-  geom_point(aes(color = Species), size = 3) + # 增加size=3以匹配之前的PCA图
+  geom_point(aes(color = Species), size = 3) +
   # Increase size=3 to match previous PCA plots
 
-  # 步骤B：添加凸包多边形
   # Step B: Add convex hull polygons
-  # 'data = cva_hull_data' -> 使用我们刚创建的CVA凸包数据
   # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
-  # 'aes(fill = Species)' -> 让多边形的填充色也按物种匹配
   # 'aes(fill = Species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> 设置为半透明
   # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> 移除多边形的外框线
   # 'color = NA' -> Remove polygon outline
   geom_polygon(
     data = cva_hull_data,
     aes(fill = Species, group = Species),
     alpha = 0.2,
     color = NA,
-    show.legend = FALSE # 移除多边形的图例
+    show.legend = FALSE
     # Remove polygon legend
   ) +
 
-  # 步骤C：添加标题和主题
   # Step C: Add title and theme
-  theme_minimal() + # 清洁的绘图外观
+  theme_minimal() +
   # Clean plot appearance
   labs(
     title = "CVA of Landmark-based Species Discrimination (with Convex Hulls)",
@@ -553,7 +449,6 @@ cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
     y = "Canonical Variate 2"
   )
 
-# 显示CVA图
 # Display CVA plot
 print(cva_plot_hull)
 ```
@@ -561,7 +456,6 @@ print(cva_plot_hull)
 
 # 1.5 save 
 ```{r}
-# 保存包含Parascaptor分析结果的当前工作空间
 # Save current workspace with Parascaptor analysis results
 save.image(file = "Parascaptor_skull_ventral.RData")
 ```
@@ -571,88 +465,70 @@ save.image(file = "Parascaptor_skull_ventral.RData")
 # 2.1 Euroscaptor Ventral Cranial Analysis
 
 ```{r}
-# 设置工作目录并为Euroscaptor数据定义文件路径
 # Set working directory and define file paths for Euroscaptor data
-setwd("F:/GM/")
-# 包含Euroscaptor腹面颅骨JPG图像的输入目录
+# setwd("F:/GM/")
 # Input directory containing Euroscaptor ventral cranial JPG images
-inpath <- file.path("F:/GM/Euroscaptor_V_JPG")
-# 处理后单个标本的输出目录
+inpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Euroscaptor_V_JPG")
 # Output directory for processed individual specimens
-outpath <- file.path("F:/GM/Euroscaptor_V_JPG_OUT")
+outpath <- file.path("./Hidden-diversity-talpid-moles_supplemnt-material/geometric morphometrics/Euroscaptor_V_JPG_OUT")
 
-# 从批量图像中分离单个标本（已完成）
 # Separate individual specimens from batch images (already completed)
 # outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
 
-# 从处理过的Euroscaptor图像中提取轮廓
 # Extract outlines from processed Euroscaptor images
 outlines <- outlineR::get_outlines(outpath = outpath, tps_file_rescale = NULL)
 
-# 将单个轮廓文件合并为单个Momocs对象
 # Combine individual outline files into single Momocs object
 outlines_combined <- outlineR::combine_outlines(single_outlines_list = outlines)
 
-# 显示所有叠加轮廓以检查主要对齐问题
 # Display all outlines stacked to check for major alignment issues
-stack(outlines_combined) # 显示所有叠加轮廓以进行初步检查
+stack(outlines_combined)
 # Shows all outlines overlaid for initial inspection
 
-# 在面板网格中分别显示每个轮廓
 # Display each outline separately in a panel grid
-Momocs::panel(outlines_combined) # 单个轮廓检查
+Momocs::panel(outlines_combined)
 # Individual outline inspection
 
-# 处理Euroscaptor轮廓以进行形态测量学分析
 # Process Euroscaptor outlines for morphometric analysis
 outlines_combined2 <- outlines_combined %>%
-  coo_center() %>% # 将所有轮廓居中到坐标原点
+  coo_center() %>%
   # Center all outlines at coordinate origin
-  coo_sample(100) %>% # 重新采样到100个点（比Parascaptor少以提高效率）
+  coo_sample(100) %>%
   # Resample to 100 points (fewer than Parascaptor for efficiency)
-  coo_scale() %>% # 标准化为单位大小以进行形状分析
+  coo_scale() %>%
   # Standardize to unit size for shape analysis
-  coo_alignxax() %>% # 沿x轴对齐以保持一致方向
+  coo_alignxax() %>%
   # Align along x-axis for consistent orientation
-  coo_slidedirection("right") # 确保所有标本朝右
+  coo_slidedirection("right")
 # Ensure all specimens face rightward
 
-# 以面板格式显示处理过的轮廓
 # Display processed outlines in panel format
 Momocs::panel(outlines_combined2)
 
-# 从轮廓对象中提取标本名称
 # Extract specimen names from the outline object
 sample_names <- names(outlines_combined2)
 
-# 通过"#"分隔符分割来解析标本名称
 # Parse specimen names by splitting on "#" delimiter
 split_list <- strsplit(sample_names, "#")
 
-# 提取前三个名称组件（属、种、凭证号）
 # Extract first three name components (genus, species, voucher)
 first_three <- lapply(split_list, function(x) x[1:3])
 
-# 将列表转换为矩阵以便更容易操作
 # Convert list to matrix for easier manipulation
 names_matrix <- do.call(rbind, first_three)
 
-# 跨属标准化种名命名约定
 # Standardize species naming conventions across genera
-names_matrix <- gsub("Euroscaptor sp1", "sp1", names_matrix) # 标准化Euroscaptor种1
+names_matrix <- gsub("Euroscaptor sp1", "sp1", names_matrix)
 # Standardize Euroscaptor species 1
-names_matrix <- gsub("Euroscaptor sp2", "sp2", names_matrix) # 标准化Euroscaptor种2
+names_matrix <- gsub("Euroscaptor sp2", "sp2", names_matrix)
 # Standardize Euroscaptor species 2
 
-# 为分类学矩阵分配有意义的列名
 # Assign meaningful column names to the taxonomic matrix
 colnames(names_matrix) <- c("genus", "species", "voucher")
 
-# 转换为现代tibble格式以进行数据操作
 # Convert to modern tibble format for data manipulation
 names_tibble <- as_tibble(names_matrix)
 
-# 将分类学信息作为因子数据附加到轮廓对象
 # Attach taxonomic information as factor data to outline object
 outlines_combined2$fac <- names_tibble
 ```
@@ -660,87 +536,70 @@ outlines_combined2$fac <- names_tibble
 
 # 2.2 Elliptic Fourier Analysis and PCA
 ```{r}
-# 检查第一个Euroscaptor标本的傅里叶谐波功率
 # Check Fourier harmonic power for first Euroscaptor specimen
-coo_oscillo(outlines_combined2[1], "efourier") # 显示谐波幅度谱
+coo_oscillo(outlines_combined2[1], "efourier")
 # Display harmonic amplitude spectrum
 
-# 可视化第一个标本的傅里叶系数结构
 # Visualize Fourier coefficient structure for first specimen
-Ptolemy(outlines_combined2[1]) # 显示系数幅度和相位信息
+Ptolemy(outlines_combined2[1])
 # Show coefficient magnitude and phase information
 
-# 对所有Euroscaptor标本执行椭圆傅里叶分析
 # Perform Elliptic Fourier Analysis on all Euroscaptor specimens
-# 参数：最小平滑(1)，50个谐波用于详细形状捕获
 # Parameters: minimal smoothing (1), 50 harmonics for detailed shape capture
 bot.f <- efourier(outlines_combined2, smooth.it = 1, nb.h = 50)
 
-# 显示EFA结果摘要
 # Display EFA results summary
 bot.f
 
-# 可视化跨谐波的系数分布（跳过第一个谐波）
 # Visualize coefficient distribution across harmonics (skip first harmonic)
 boxplot(bot.f, drop = 1)
 
-# 对傅里叶系数执行主成分分析
 # Perform Principal Component Analysis on Fourier coefficients
 bot.p <- PCA(bot.f)
 
-# 检查PCA对象结构
 # Check PCA object structure
 class(bot.p)
 
-# 准备形态空间的2D可视化
 # Prepare for 2D visualization of morphospace
-# 显示可用的颜色调色板选项
 # Display available color palette options
 # pal_qual_Paired(9) %>% barplot(rep(1, 9), col=.)
 
-# 将物种标签转换为因子以进行正确分组
 # Convert species labels to factors for proper grouping
 bot.p$fac$species <- as.factor(bot.p$fac$species)
 
-# 生成与物种组数量匹配的颜色调色板
 # Generate color palette matching number of species groups
 palette <- pal_qual_Paired(length(levels(bot.p$fac$species)))
 
-# 提取PCA坐标并添加物种信息
 # Extract PCA coordinates and add species information
-pca_scores <- as.data.frame(bot.p$x) # 获取每个标本的PC得分
+pca_scores <- as.data.frame(bot.p$x)
 # Get PC scores for each specimen
-pca_scores$species <- bot.p$fac$species # 添加物种分组标签
+pca_scores$species <- bot.p$fac$species
 # Add species grouping labels
 
-# 计算凸包以可视化PC空间中的物种聚类
 # Calculate convex hulls to visualize species clustering in PC space
 pca_hull_data <- pca_scores %>%
-  group_by(species) %>% # 按物种分组标本
+  group_by(species) %>%
   # Group specimens by species
-  do(hull = .[chull(.$PC1, .$PC2), ]) # 找到凸包边界点
+  do(hull = .[chull(.$PC1, .$PC2), ])
 # Find convex hull boundary points
 
-# 将凸包数据转换为绘图格式
 # Convert hull data to plotting format
 pca_hull_data <- bind_rows(pca_hull_data$hull)
 
-# 为Euroscaptor形态空间可视化创建PCA散点图
 # Create PCA scatter plot for Euroscaptor morphospace visualization
 pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
-  geom_point(size = 3) + # 将标本绘制为彩色点
+  geom_point(size = 3) +
   # Plot specimens as colored points
-  # 添加具有透明度的物种聚类多边形
   # Add species cluster polygons with transparency
   geom_polygon(
     data = pca_hull_data, aes(x = PC1, y = PC2, group = species, fill = species),
     alpha = 0.2, color = NA
   ) +
-  scale_color_manual(values = palette) + # 应用物种特异性颜色
+  scale_color_manual(values = palette) +
   # Apply species-specific colors
-  scale_fill_manual(values = palette) + # 应用匹配的填充颜色
+  scale_fill_manual(values = palette) +
   # Apply matching fill colors
-  theme_minimal() + # 清洁的绘图外观
+  theme_minimal() +
   # Clean plot appearance
   labs(
     title = "PCA of Fourier-transformed Euroscaptor cranial outlines",
@@ -750,70 +609,56 @@ pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
 ```
 
 
-
-
 # 2.3 Canonical Variate Analysis (CVA)
 ```{r}
-# 执行CVA以进行Euroscaptor物种间的判别分析
 # Perform CVA for discriminant analysis between Euroscaptor species
-# CVA找到最佳分离组的线性组合
 # CVA finds linear combinations that best separate groups
 bot.cva <- CVA(bot.f$coe, bot.f$fac$species)
 
-# 提取典型变量得分（判别坐标）
 # Extract canonical variate scores (discriminant coordinates)
 cva_scores <- bot.cva$CVscores
 
-# 创建包含CVA结果和物种标签的数据框
 # Create data frame with CVA results and species labels
 df <- data.frame(
-  CV1 = cva_scores[, 1], # 第一典型变量（主要判别轴）
+  CV1 = cva_scores[, 1],
   # First canonical variate (primary discriminant axis)
-  CV2 = cva_scores[, 2], # 第二典型变量（次要判别轴）
+  CV2 = cva_scores[, 2],
   # Second canonical variate (secondary discriminant axis)
-  #  CV3 = cva_scores[,3],  # 第三典型变量（可选）
   # Third canonical variate (optional)
-  #  CV4 = cva_scores[,4],  # 第四典型变量（可选）
   # Fourth canonical variate (optional)
-  species = bot.f$fac$species # 物种分类标签
+  species = bot.f$fac$species
   # Species classification labels
 )
 
-# 转换为tibble以进行现代数据处理
 # Convert to tibble for modern data handling
 df_tbl <- as_tibble(df)
 
-# 在CVA空间中为物种组计算凸包
 # Calculate convex hulls for species groups in CVA space
 hull_data <- df_tbl %>%
-  group_by(species) %>% # 按物种身份分组
+  group_by(species) %>%
   # Group by species identity
-  do(hull = .[chull(.$CV1, .$CV2), ]) # 找到凸包边界顶点
+  do(hull = .[chull(.$CV1, .$CV2), ])
 # Find hull boundary vertices
-# 将凸包数据转换为适当的绘图格式
 # Convert hull data to proper plotting format
 hull_data <- bind_rows(hull_data$hull)
 
-# 从调色板中选择特定颜色以保持一致的可视化
 # Select specific colors from palette for consistent visualization
 palette <- pal_qual_Paired(9)[c(1, 2, 5, 6, 9)]
 
-# 为Euroscaptor物种分离创建CVA判别图
 # Create CVA discrimination plot for Euroscaptor species separation
 cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
-  geom_point(size = 3) + # 在典型变量空间中绘制标本
+  geom_point(size = 3) +
   # Plot specimens in canonical variate space
-  # 添加半透明的物种组边界
   # Add semi-transparent species group boundaries
   geom_polygon(
     data = hull_data, aes(x = CV1, y = CV2, group = species, fill = species),
     alpha = 0.2, color = NA
   ) +
-  scale_color_manual(values = palette) + # 应用自定义点颜色
+  scale_color_manual(values = palette) +
   # Apply custom point colors
-  scale_fill_manual(values = palette) + # 应用自定义填充颜色
+  scale_fill_manual(values = palette) +
   # Apply custom fill colors
-  theme_minimal() + # 清洁的绘图主题
+  theme_minimal() +
   # Clean plot theme
   labs(
     title = "CVA of Euroscaptor species discrimination",
@@ -821,16 +666,15 @@ cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
     y = "Canonical Variate 2"
   ) +
   theme(
-    # 自定义网格外观以提高可读性
     # Customize grid appearance for better readability
     panel.grid.major = element_line(color = "gray", size = 0.5),
-    panel.grid.minor = element_blank(), # 移除次要网格线以获得更清洁的外观
+    panel.grid.minor = element_blank(),
     # Remove minor grid lines for cleaner look
     panel.grid.major.x = element_line(color = "gray", size = 0.5, linetype = "dotted"),
     panel.grid.major.y = element_line(color = "gray", size = 0.5, linetype = "dotted"),
-    panel.background = element_blank(), # 移除面板背景
+    panel.background = element_blank(),
     # Remove panel background
-    plot.background = element_blank() # 移除绘图背景
+    plot.background = element_blank()
     # Remove plot background
   )
 ```
@@ -838,91 +682,71 @@ cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
 
 # 2.4 semilandmark-based analyses PCA and CVA
 ```{r}
-# 测试基于标志点的分析方法作为轮廓分析的替代方案
 # Test landmark analysis approach as alternative to outline analysis
-pile(outlines_combined2) # 显示叠加轮廓以评估标志点放置
+pile(outlines_combined2)
 # Display outlines stacked for landmark placement assessment
 
 
-# 对标志点数据执行完整的广义Procrustes分析
 # Perform full Generalized Procrustes Analysis on landmark data
-# 这会对齐、缩放和旋转标本以最小化形状差异
 # This aligns, scales, and rotates specimens to minimize shape differences
 outlines_100pts <- coo_sample(outlines_combined2, 100)
 
-# 执行广义Procrustes分析
 # Perform Generalized Procrustes Analysis
 w.al <- fgProcrustes(outlines_100pts)
 
 
-# 显示以第一个标本为参考的对齐标本
 # Display aligned specimens with first specimen as reference
 w.al %>%
-  coo_slide(id = 1) %>% # 滑动以使用标本1作为参考对齐
+  coo_slide(id = 1) %>%
   # Slide to use specimen 1 as reference alignment
-  stack() # 叠加所有对齐标本以进行视觉检查
+  stack()
 # Stack all aligned specimens for visual inspection
 
-# 以叠加格式显示对齐标本
 # Display aligned specimens in stacked format
 pile(w.al)
 
-# 提取坐标矩阵并转换为适合PCA的格式
 # Extract coordinate matrices and convert to PCA-suitable format
-# 将每个标本的坐标矩阵转换为单个向量以进行多变量分析
 # Transform each specimen's coordinate matrix into a single vector for multivariate analysis
-all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat))) # 将矩阵转换为向量并转置
+all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat)))
 # Convert matrices to vectors and transpose
-combined_matrix <- do.call(rbind, all_matrices) # 将所有标本向量合并为分析矩阵
+combined_matrix <- do.call(rbind, all_matrices)
 # Combine all specimen vectors into analysis matrix
 
-# 提取标本元数据（物种信息）
 # Extract specimen metadata (species information)
 sample_info <- w.al[[2]]
 
-# 对Procrustes对齐的坐标数据执行主成分分析
 # Perform Principal Component Analysis on Procrustes-aligned coordinate data
 pca_result <- prcomp(combined_matrix, scale. = TRUE)
 
-# 将PCA结果与标本分类学信息整合
 # Integrate PCA results with specimen taxonomic information
 pca_data <- data.frame(pca_result$x, species = sample_info$species)
 
 
-# 在每组内找到能包围所有点的凸包点
 # Find convex hull points that enclose all points within each group
 hull_data <- pca_data %>%
   group_by(sample_info$species) %>%
   slice(chull(PC1, PC2))
 
-# 创建Procrustes对齐标志点坐标的PCA图
 # Create PCA plot of Procrustes-aligned landmark coordinates
 pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
 
-  # 步骤A：绘制散点（与之前的代码相同）
   # Step A: Plot scatter points (same as previous code)
   geom_point(aes(color = species), size = 3) +
 
-  # 步骤B：添加凸包多边形
   # Step B: Add convex hull polygons
-  # 'data = hull_data' -> 使用我们刚创建的凸包数据
   # 'data = hull_data' -> Use the convex hull data we just created
-  # 'aes(fill = species)' -> 让多边形的填充色也按物种匹配
   # 'aes(fill = species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> 设置为半透明
   # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> 移除多边形的外框线
   # 'color = NA' -> Remove polygon outline
   geom_polygon(
     data = hull_data,
     aes(fill = species, group = species),
     alpha = 0.2,
     color = NA,
-    show.legend = FALSE # 不需要多边形的图例（散点已经有了）
+    show.legend = FALSE
     # Don't need polygon legend (scatter points already have it)
   ) +
 
-  # 步骤C：添加标题和主题
   # Step C: Add title and theme
   labs(
     title = "PCA of Procrustes-aligned Euroscaptor landmark coordinates",
@@ -931,78 +755,62 @@ pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
   ) +
   theme_minimal()
 
-# 可选：如果定义了'palette'变量，可以在这里添加
 # Optional: If 'palette' variable is defined, can add here:
 # scale_color_manual(values = palette) +
 # scale_fill_manual(values = palette)
 
-# 显示绘图
 # Display the plot
 print(pca_plot_procrustes)
 
 
-# 对标志点坐标数据进行典型变量分析
 # Canonical Variate Analysis on landmark coordinate data
-# CVA执行监督分类以最大化组间差异
 # CVA performs supervised classification to maximize between-group differences
 bot.cva <- CVA(combined_matrix, sample_info$species)
 
-# 提取典型变量得分（判别函数坐标）
 # Extract canonical variate scores (discriminant function coordinates)
 cva_scores <- bot.cva$CVscores
 
-# 创建包含所有典型变量和物种标签的综合数据框
 # Create comprehensive data frame with all canonical variates and species labels
 df <- data.frame(
-  CV1 = cva_scores[, 1], # 第一典型变量（主要判别轴）
+  CV1 = cva_scores[, 1],
   # First canonical variate (primary discrimination axis)
-  CV2 = cva_scores[, 2], # 第二典型变量（次要判别轴）
+  CV2 = cva_scores[, 2],
   # Second canonical variate (secondary discrimination axis)
-  Species = sample_info$species # 物种分类标签
+  Species = sample_info$species
   # Species classification labels
 )
 
-# 转换为tibble以进行现代数据操作
 # Convert to tibble for modern data manipulation
 df_tbl <- as_tibble(df)
 
 
-# 计算CVA空间中的凸包数据
 # Calculate convex hull data in CVA space
 cva_hull_data <- df_tbl %>%
   group_by(Species) %>%
   slice(chull(CV1, CV2))
 
-# 创建带凸包的CVA图
 # Create CVA plot with convex hulls
 cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
-  # 步骤A：绘制散点
   # Step A: Plot scatter points
-  geom_point(aes(color = Species), size = 3) + # 增加size=3以匹配之前的PCA图
+  geom_point(aes(color = Species), size = 3) +
   # Increase size=3 to match previous PCA plots
 
-  # 步骤B：添加凸包多边形
   # Step B: Add convex hull polygons
-  # 'data = cva_hull_data' -> 使用我们刚创建的CVA凸包数据
   # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
-  # 'aes(fill = Species)' -> 让多边形的填充色也按物种匹配
   # 'aes(fill = Species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> 设置为半透明
   # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> 移除多边形的外框线
   # 'color = NA' -> Remove polygon outline
   geom_polygon(
     data = cva_hull_data,
     aes(fill = Species, group = Species),
     alpha = 0.2,
     color = NA,
-    show.legend = FALSE # 移除多边形的图例
+    show.legend = FALSE
     # Remove polygon legend
   ) +
 
-  # 步骤C：添加标题和主题
   # Step C: Add title and theme
-  theme_minimal() + # 清洁的绘图外观
+  theme_minimal() +
   # Clean plot appearance
   labs(
     title = "CVA of Euroscaptor Landmark-based Species Discrimination (with Convex Hulls)",
@@ -1010,7 +818,6 @@ cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
     y = "Canonical Variate 2"
   )
 
-# 显示CVA图
 # Display CVA plot
 print(cva_plot_hull)
 ```
@@ -1019,25 +826,17 @@ print(cva_plot_hull)
 # 2.5 Save Results
 
 ```{r}
-# 保存包含Parascaptor和Euroscaptor分析的当前工作空间
 # Save current workspace containing both Parascaptor and Euroscaptor analyses
 save.image(file = "Euroscaptor_skull_ventral.RData")
 ```
 
 # Analysis Complete
-# 分析完成
 
-# 此分析工作流程演示了：
 # This analysis workflow demonstrates:
-# 1. 轮廓提取和处理用于形态测量学分析
 #    Outline extraction and processing for morphometric analysis
-# 2. 椭圆傅里叶分析用于形状量化
 #    Elliptic Fourier Analysis for shape quantification
-# 3. 主成分分析用于形态空间可视化
 #    Principal Component Analysis for morphospace visualization
-# 4. 典型变量分析用于物种判别
 #    Canonical Variate Analysis for species discrimination
-# 5. 基于标志点的几何形态测量学作为替代方法
 #    Landmark-based geometric morphometrics as alternative approach
 
 
