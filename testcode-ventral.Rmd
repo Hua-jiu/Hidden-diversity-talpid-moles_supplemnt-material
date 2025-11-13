@@ -1,0 +1,846 @@
+---
+title: "Ventral Cranial Morphometric Analysis"
+output: html_document
+date: "2024-09-19"
+---
+
+# 0. Load Required Packages
+
+```{r}
+# Load packages for outline analysis and morphometrics
+require("outlineR") # For outline extraction and processing
+require("geomorph") # For geometric morphometrics
+require("Momocs") # For outline-based morphometric analysis
+require("shapes") # For shape analysis
+require("tibble") # For data manipulationclea
+library(plotly) # For interactive 3D plotting
+library(Morpho) # For morphometric computations
+library(ggfortify) # For ggplot2 extensions
+library(dplyr) # For data manipulation
+library(patchwork) # For combining plots
+library(ggplot2)
+library(readxl)
+library(MASS)
+library(tidyr)
+# Display color palette for visualization
+# pal_qual_Paired(9) %>% barplot(rep(1, 9), col = .)
+```
+
+# 3. Load Previous Analysis Results
+```{r}
+# Load the saved workspace containing Parascaptor cranial ventral analysis data
+# load(file = "F:/GM/Parascaptor_skull_ventral.RData")
+
+# Alternative: load Euroscaptor data (commented out to avoid overwriting)
+# load(file = "F:/GM/Euroscaptor_skull_ventral.RData")
+# Note: Object names are identical between files, so loading both simultaneously
+# would overwrite variables. Use caution when working with multiple datasets.
+```
+
+
+# 1 Parascaptor Ventral cranium 
+# 1.1 prepare data
+
+```{r}
+# Set working directory and define file paths for Parascaptor data
+setwd("./Hidden-diversity-talpid-moles_supplemnt-material")
+# Input directory containing original JPG images
+inpath <- file.path("./geometric morphometrics/Parascaptor_V_JPG")
+
+# Output directory for separated individual specimens
+outpath <- file.path("./geometric morphometrics/Parascaptor_V_JPG_OUT")
+
+# Separate individual specimens from batch images (already completed)
+# outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
+
+# Extract outlines from processed images
+# tps_file_rescale = NULL means no scaling information from TPS files
+outlines <- outlineR::get_outlines(outpath = outpath, tps_file_rescale = NULL)
+
+# Combine individual outline files into a single Momocs object
+outlines_combined <- outlineR::combine_outlines(single_outlines_list = outlines)
+
+
+# Display all outlines stacked on top of each other to check for alignment issues
+stack(outlines_combined)
+# Shows all outlines overlaid (consider centering/scaling first)
+
+# Display all outlines in a panel grid for individual inspection
+Momocs::panel(outlines_combined)
+# Shows each outline separately in a grid
+
+# Process outlines for morphometric analysis
+outlines_combined2 <- outlines_combined %>%
+  coo_center() %>%
+  # Center all outlines at origin (0,0)
+  coo_sample(150) %>%
+  # Resample to 150 points for standardization
+  coo_scale() %>%
+  # Scale to unit size for shape comparison
+  coo_alignxax() %>%
+  # Align along x-axis for consistent orientation
+  coo_slidedirection("right")
+# Ensure all specimens face right
+
+# Display processed outlines in panel view
+Momocs::panel(outlines_combined2)
+
+# Display processed outlines stacked to verify consistent orientation
+stack(outlines_combined2)
+
+# Create side-by-side comparison of original vs processed outlines
+# Clear any conflicting variable names that might cause errors
+if (exists("names") && is.character(get("names"))) rm(names)
+
+# Set up two-panel plot layout for comparison
+par(mfrow = c(1, 2))
+# Left panel: original outlines (preserving size differences between specimens)
+outlines_combined %>%
+  coo_center() %>%
+  # Center outlines while preserving size differences
+  stack(title = "Original (with size)")
+# Right panel: processed outlines (standardized for shape analysis)
+outlines_combined2 %>%
+  coo_rotate(pi) %>%
+  # Rotate 180 degrees for better orientation match
+  stack(title = "Processed (scaled)")
+
+# Extract and process specimen names for taxonomic classification
+sample_names <- names(outlines_combined2)
+
+# Split specimen names by "#" delimiter to separate taxonomic information
+split_list <- strsplit(sample_names, "#")
+
+# Extract first three components (genus, species, voucher number)
+first_three <- lapply(split_list, function(x) x[1:3])
+
+# Convert to matrix format for easier manipulation
+names_matrix <- do.call(rbind, first_three)
+
+# Standardize species names for consistency
+names_matrix <- gsub("Parascaptor sp1", "sp1", names_matrix)
+# Simplify species 1 name
+names_matrix <- gsub("Parascaptor sp2", "sp2", names_matrix)
+# Simplify species 2 name
+
+# Add column names to the matrix
+colnames(names_matrix) <- c("genus", "species", "voucher")
+
+# Convert to tibble (modern data frame) for easier handling
+names_tibble <- as_tibble(names_matrix)
+
+# Add taxonomic information as factors to the outline object
+outlines_combined2$fac <- names_tibble
+```
+
+# 1.2. Elliptical Fourier Analysis PCA
+```{r}
+# Check Fourier transform quality for the first specimen
+coo_oscillo(outlines_combined2[1], "efourier")
+# Plot harmonic power spectrum
+
+# Display Fourier coefficients for the first specimen
+Ptolemy(outlines_combined2[1])
+# Visualize coefficient contributions
+
+# Calibrate harmonic power for Elliptic Fourier Analysis, testing up to 20 harmonics
+calibration_results <- calibrate_harmonicpower_efourier(outlines_combined2, nb.h = 20)
+
+# Show minimum harmonics from calibration results
+calibration_results$minh
+
+# Critical: Create correct harmonic sequence (h2, h3, ..., h16)
+# Use paste0 to dynamically generate character vector
+correct_order <- paste0("h", 2:16)
+
+# Use ggplot2 to customize and display calibration plot
+calibration_results$gg +
+  theme_bw() +
+
+  # Use scale_x_discrete with 'limits' to force correct numerical order
+  scale_x_discrete(limits = correct_order) +
+
+  # Set only ylim (Y-axis) in coord_cartesian
+  # X-axis "limits" already handled by scale_x_discrete
+  coord_cartesian(ylim = c(90, 100)) +
+
+  ggtitle("Calibration of EFA Harmonic Power (Harmonics 1–20)") +
+  labs(
+    x = "Harmonic Number",
+    y = "Cumulative Power (%)"
+  )
+
+  # Add red dashed line at 99.9% as reference
+  geom_hline(yintercept = 99.9, linetype = "dashed", color = "red")
+
+
+# Perform Elliptic Fourier Analysis (EFA) on all specimens
+# smooth.it = 1: minimal smoothing, nb.h = 14: use 14 harmonics
+bot.f <- efourier(outlines_combined2, smooth.it = 1, nb.h = 14)
+
+# Display EFA results summary
+bot.f
+
+# Create boxplot to visualize coefficient distributions (drop first harmonic)
+boxplot(bot.f, drop = 1)
+
+# Perform Principal Component Analysis on Fourier coefficients
+bot.p <- PCA(bot.f)
+
+# Check the class of PCA object
+class(bot.p)
+
+# Prepare data for 2D visualization
+# Create color palette for species visualization
+# Display available colors
+
+# Convert species data to factor for proper grouping
+bot.p$fac$species <- as.factor(bot.p$fac$species)
+
+# Define custom color palette for consistent visualization
+# Automatic palette
+palette <- c("#636EFA", "#EF553B", "#00CC96")
+# Custom blue, red, green palette
+
+# Extract PCA scores and add species information
+pca_scores <- as.data.frame(bot.p$x)
+# Get PC coordinates for each specimen
+pca_scores$species <- bot.p$fac$species
+# Add species labels
+
+# Calculate convex hulls for each species group to show clustering
+pca_hull_data <- pca_scores %>%
+  group_by(species) %>%
+  # Group by species
+  do(hull = .[chull(.$PC1, .$PC2), ])
+# Find convex hull vertices
+
+# Convert hull data to proper data frame format for plotting
+pca_hull_data <- bind_rows(pca_hull_data$hull)
+
+# Create PCA scatter plot with species-specific coloring and convex hulls
+pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
+  geom_point(size = 3) +
+  # Plot individual specimens as points
+  # Add semi-transparent polygons showing species clusters
+  geom_polygon(
+    data = pca_hull_data, aes(x = PC1, y = PC2, group = species, fill = species),
+    alpha = 0.2, color = NA
+  ) +
+  scale_color_manual(values = palette) +
+  # Apply custom colors to points
+  scale_fill_manual(values = palette) +
+  # Apply custom colors to polygons
+  theme_minimal() +
+  # Clean plot theme
+  labs(
+    title = "PCA of Fourier-transformed cranial outlines",
+    x = "Principal Component 1",
+    y = "Principal Component 2"
+  )
+
+# Display PCA plot
+pca_plot
+```
+
+
+# 1.3 Parascaptor Elliptical Fourier Analysis CVA
+```{r}
+# Canonical Variate Analysis (CVA) for supervised classification
+# CVA maximizes between-group variance while minimizing within-group variance
+bot.cva <- CVA(bot.f$coe, bot.f$fac$species)
+
+# Extract CVA scores (coordinates in canonical space)
+cva_scores <- bot.cva$CVscores
+
+# Create data frame with CVA coordinates and species information
+df <- data.frame(
+  CV1 = cva_scores[, 1],
+  # First canonical variate
+  CV2 = cva_scores[, 2],
+  # Second canonical variate
+  # Third canonical variate (commented out)
+  # Fourth canonical variate (commented out)
+  species = bot.f$fac$species
+  # Species labels
+)
+
+# Convert to tibble for modern data manipulation
+df_tbl <- as_tibble(df)
+
+# Calculate convex hulls for species groups in CVA space
+hull_data <- df_tbl %>%
+  group_by(species) %>%
+  # Group by species
+  do(hull = .[chull(.$CV1, .$CV2), ])
+# Find convex hull vertices
+# Convert hull data to proper data frame format
+hull_data <- bind_rows(hull_data$hull)
+
+# Create CVA scatter plot with species clustering
+cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
+  geom_point(size = 3) +
+  # Plot specimens as colored points
+  # Add semi-transparent species group polygons
+  geom_polygon(
+    data = hull_data, aes(x = CV1, y = CV2, group = species, fill = species),
+    alpha = 0.2, color = NA
+  ) +
+  scale_color_manual(values = palette) +
+  # Apply custom point colors
+  scale_fill_manual(values = palette) +
+  # Apply custom fill colors
+  theme_minimal() +
+  # Clean plot theme
+  labs(
+    title = "CVA of Parascaptor species",
+    # Updated title for current analysis
+    x = "Canonical Variate 1",
+    y = "Canonical Variate 2"
+  ) +
+  theme(
+    # Customize grid lines for better visualization
+    panel.grid.major = element_line(color = "gray", size = 0.5),
+    panel.grid.minor = element_blank(),
+    # Remove minor grid lines
+    panel.grid.major.x = element_line(color = "gray", size = 0.5, linetype = "dotted"),
+    panel.grid.major.y = element_line(color = "gray", size = 0.5, linetype = "dotted"),
+    panel.background = element_blank(),
+    # Remove panel background
+    plot.background = element_blank()
+    # Remove plot background
+  )
+
+cva_plot
+```
+
+
+# 1.4 Landmark-based Geometric Morphometric Analysis
+```{r}
+# Test landmark analysis approach as alternative to outline analysis
+pile(outlines_combined2)
+# Display outlines stacked for landmark placement assessment
+
+
+# Perform full Generalized Procrustes Analysis on landmark data
+# This aligns, scales, and rotates specimens to minimize shape differences
+outlines_150pts <- coo_sample(outlines_combined2, 150)
+
+# Perform Generalized Procrustes Analysis
+w.al <- fgProcrustes(outlines_150pts)
+
+
+# Display aligned specimens with first specimen as reference
+w.al %>%
+  coo_slide(id = 1) %>%
+  # Slide to use specimen 1 as reference alignment
+  stack()
+# Stack all aligned specimens for visual inspection
+
+# Display aligned specimens in stacked format
+pile(w.al)
+
+# Extract coordinate matrices and convert to PCA-suitable format
+# Transform each specimen's coordinate matrix into a single vector for multivariate analysis
+all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat)))
+# Convert matrices to vectors and transpose
+combined_matrix <- do.call(rbind, all_matrices)
+# Combine all specimen vectors into analysis matrix
+
+# Extract specimen metadata (species information)
+sample_info <- w.al[[2]]
+
+# Perform Principal Component Analysis on Procrustes-aligned coordinate data
+pca_result <- prcomp(combined_matrix, scale. = TRUE)
+
+# Integrate PCA results with specimen taxonomic information
+pca_data <- data.frame(pca_result$x, species = sample_info$species)
+
+
+# Find convex hull points that enclose all points within each group
+hull_data <- pca_data %>%
+  group_by(sample_info$species) %>%
+  slice(chull(PC1, PC2))
+
+# Create PCA plot of Procrustes-aligned landmark coordinates
+pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
+
+  # Step A: Plot scatter points (same as previous code)
+  geom_point(aes(color = species), size = 3) +
+
+  # Step B: Add convex hull polygons
+  # 'data = hull_data' -> Use the convex hull data we just created
+  # 'aes(fill = species)' -> Make polygon fill colors match by species
+  # 'alpha = 0.2' -> Set to semi-transparent
+  # 'color = NA' -> Remove polygon outline
+  geom_polygon(
+    data = hull_data,
+    aes(fill = species, group = species),
+    alpha = 0.2,
+    color = NA,
+    show.legend = FALSE
+    # Don't need polygon legend (scatter points already have it)
+  ) +
+
+  # Step C: Add title and theme
+  labs(
+    title = "PCA of Procrustes-aligned landmark coordinates",
+    x = "Principal Component 1",
+    y = "Principal Component 2"
+  ) +
+  theme_minimal()
+
+# Optional: If 'palette' variable is defined, can add here:
+# scale_color_manual(values = palette) +
+# scale_fill_manual(values = palette)
+
+# Display the plot
+print(pca_plot_procrustes)
+
+
+# Canonical Variate Analysis on landmark coordinate data
+# CVA performs supervised classification to maximize between-group differences
+bot.cva <- CVA(combined_matrix, sample_info$species)
+
+# Extract canonical variate scores (discriminant function coordinates)
+cva_scores <- bot.cva$CVscores
+
+# Create comprehensive data frame with all canonical variates and species labels
+df <- data.frame(
+  CV1 = cva_scores[, 1],
+  # First canonical variate (primary discrimination axis)
+  CV2 = cva_scores[, 2],
+  # Second canonical variate (secondary discrimination axis)
+  Species = sample_info$species
+  # Species classification labels
+)
+
+# Convert to tibble for modern data manipulation
+df_tbl <- as_tibble(df)
+
+
+# Calculate convex hull data in CVA space
+cva_hull_data <- df_tbl %>%
+  group_by(Species) %>%
+  slice(chull(CV1, CV2))
+
+# Create CVA plot with convex hulls
+cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
+  # Step A: Plot scatter points
+  geom_point(aes(color = Species), size = 3) +
+  # Increase size=3 to match previous PCA plots
+
+  # Step B: Add convex hull polygons
+  # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
+  # 'aes(fill = Species)' -> Make polygon fill colors match by species
+  # 'alpha = 0.2' -> Set to semi-transparent
+  # 'color = NA' -> Remove polygon outline
+  geom_polygon(
+    data = cva_hull_data,
+    aes(fill = Species, group = Species),
+    alpha = 0.2,
+    color = NA,
+    show.legend = FALSE
+    # Remove polygon legend
+  ) +
+
+  # Step C: Add title and theme
+  theme_minimal() +
+  # Clean plot appearance
+  labs(
+    title = "CVA of Landmark-based Species Discrimination (with Convex Hulls)",
+    x = "Canonical Variate 1",
+    y = "Canonical Variate 2"
+  )
+
+# Display CVA plot
+print(cva_plot_hull)
+```
+
+
+# 1.5 save 
+```{r}
+# Save current workspace with Parascaptor analysis results
+save.image(file = "./geometric_morphometrics/R_Data/Parascaptor_skull_ventral.RData")
+```
+
+
+# 2 Euroscaptor
+# 2.1 Euroscaptor Ventral Cranial Analysis
+
+```{r}
+# Set working directory and define file paths for Parascaptor data
+setwd("/Users/anlong/Documents/同步空间/Project_Code/Project/mole_project/Hidden-diversity-talpid-moles_supplemnt-material")
+# Input directory containing Euroscaptor ventral cranial JPG images
+inpath <- file.path("./geometric_morphometrics/Euroscaptor_V_JPG")
+# Output directory for processed individual specimens
+outpath <- file.path("./geometric_morphometrics/Euroscaptor_V_JPG_OUT")
+
+# Separate individual specimens from batch images (already completed)
+# outlineR::separate_single_artefacts(inpath = inpath, outpath = outpath)
+
+# Extract outlines from processed Euroscaptor images
+outlines <- outlineR::get_outlines(outpath = outpath, tps_file_rescale = NULL)
+
+# Combine individual outline files into single Momocs object
+outlines_combined <- outlineR::combine_outlines(single_outlines_list = outlines)
+
+# Display all outlines stacked to check for major alignment issues
+stack(outlines_combined)
+# Shows all outlines overlaid for initial inspection
+
+# Display each outline separately in a panel grid
+Momocs::panel(outlines_combined)
+# Individual outline inspection
+
+# Process Euroscaptor outlines for morphometric analysis
+outlines_combined2 <- outlines_combined %>%
+  coo_center() %>%
+  # Center all outlines at coordinate origin
+  coo_sample(100) %>%
+  # Resample to 100 points (fewer than Parascaptor for efficiency)
+  coo_scale() %>%
+  # Standardize to unit size for shape analysis
+  coo_alignxax() %>%
+  # Align along x-axis for consistent orientation
+  coo_slidedirection("right")
+# Ensure all specimens face rightward
+
+# Display processed outlines in panel format
+Momocs::panel(outlines_combined2)
+
+# Extract specimen names from the outline object
+sample_names <- names(outlines_combined2)
+
+# Parse specimen names by splitting on "#" delimiter
+split_list <- strsplit(sample_names, "#")
+
+# Extract first three name components (genus, species, voucher)
+first_three <- lapply(split_list, function(x) x[1:3])
+
+# Convert list to matrix for easier manipulation
+names_matrix <- do.call(rbind, first_three)
+
+# Standardize species naming conventions across genera
+names_matrix <- gsub("Euroscaptor sp1", "sp1", names_matrix)
+# Standardize Euroscaptor species 1
+names_matrix <- gsub("Euroscaptor sp2", "sp2", names_matrix)
+# Standardize Euroscaptor species 2
+
+# Assign meaningful column names to the taxonomic matrix
+colnames(names_matrix) <- c("genus", "species", "voucher")
+
+# Convert to modern tibble format for data manipulation
+names_tibble <- as_tibble(names_matrix)
+
+# Attach taxonomic information as factor data to outline object
+outlines_combined2$fac <- names_tibble
+```
+
+
+# 2.2 Elliptic Fourier Analysis and PCA
+```{r}
+# Check Fourier harmonic power for first Euroscaptor specimen
+coo_oscillo(outlines_combined2[1], "efourier")
+# Display harmonic amplitude spectrum
+
+# Visualize Fourier coefficient structure for first specimen
+Ptolemy(outlines_combined2[1])
+# Show coefficient magnitude and phase information
+
+# Perform Elliptic Fourier Analysis on all Euroscaptor specimens
+# Parameters: minimal smoothing (1), 50 harmonics for detailed shape capture
+bot.f <- efourier(outlines_combined2, smooth.it = 1, nb.h = 50)
+
+# Display EFA results summary
+bot.f
+
+# Visualize coefficient distribution across harmonics (skip first harmonic)
+boxplot(bot.f, drop = 1)
+
+# Perform Principal Component Analysis on Fourier coefficients
+bot.p <- PCA(bot.f)
+
+# Check PCA object structure
+class(bot.p)
+
+# Prepare for 2D visualization of morphospace
+# Display available color palette options
+# pal_qual_Paired(9) %>% barplot(rep(1, 9), col=.)
+
+# Convert species labels to factors for proper grouping
+bot.p$fac$species <- as.factor(bot.p$fac$species)
+
+# Generate color palette matching number of species groups
+palette <- pal_qual_Paired(length(levels(bot.p$fac$species)))
+
+# Extract PCA coordinates and add species information
+pca_scores <- as.data.frame(bot.p$x)
+# Get PC scores for each specimen
+pca_scores$species <- bot.p$fac$species
+# Add species grouping labels
+
+# Calculate convex hulls to visualize species clustering in PC space
+pca_hull_data <- pca_scores %>%
+  group_by(species) %>%
+  # Group specimens by species
+  do(hull = .[chull(.$PC1, .$PC2), ])
+# Find convex hull boundary points
+
+# Convert hull data to plotting format
+pca_hull_data <- bind_rows(pca_hull_data$hull)
+
+# Create PCA scatter plot for Euroscaptor morphospace visualization
+pca_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = species)) +
+  geom_point(size = 3) +
+  # Plot specimens as colored points
+  # Add species cluster polygons with transparency
+  geom_polygon(
+    data = pca_hull_data, aes(x = PC1, y = PC2, group = species, fill = species),
+    alpha = 0.2, color = NA
+  ) +
+  scale_color_manual(values = palette) +
+  # Apply species-specific colors
+  scale_fill_manual(values = palette) +
+  # Apply matching fill colors
+  theme_minimal() +
+  # Clean plot appearance
+  labs(
+    title = "PCA of Fourier-transformed Euroscaptor cranial outlines",
+    x = "Principal Component 1",
+    y = "Principal Component 2"
+  )
+```
+
+
+# 2.3 Canonical Variate Analysis (CVA)
+```{r}
+# Perform CVA for discriminant analysis between Euroscaptor species
+# CVA finds linear combinations that best separate groups
+bot.cva <- CVA(bot.f$coe, bot.f$fac$species)
+
+# Extract canonical variate scores (discriminant coordinates)
+cva_scores <- bot.cva$CVscores
+
+# Create data frame with CVA results and species labels
+df <- data.frame(
+  CV1 = cva_scores[, 1],
+  # First canonical variate (primary discriminant axis)
+  CV2 = cva_scores[, 2],
+  # Second canonical variate (secondary discriminant axis)
+  # Third canonical variate (optional)
+  # Fourth canonical variate (optional)
+  species = bot.f$fac$species
+  # Species classification labels
+)
+
+# Convert to tibble for modern data handling
+df_tbl <- as_tibble(df)
+
+# Calculate convex hulls for species groups in CVA space
+hull_data <- df_tbl %>%
+  group_by(species) %>%
+  # Group by species identity
+  do(hull = .[chull(.$CV1, .$CV2), ])
+# Find hull boundary vertices
+# Convert hull data to proper plotting format
+hull_data <- bind_rows(hull_data$hull)
+
+# Select specific colors from palette for consistent visualization
+palette <- pal_qual_Paired(9)[c(1, 2, 5, 6, 9)]
+
+# Create CVA discrimination plot for Euroscaptor species separation
+cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
+  geom_point(size = 3) +
+  # Plot specimens in canonical variate space
+  # Add semi-transparent species group boundaries
+  geom_polygon(
+    data = hull_data, aes(x = CV1, y = CV2, group = species, fill = species),
+    alpha = 0.2, color = NA
+  ) +
+  scale_color_manual(values = palette) +
+  # Apply custom point colors
+  scale_fill_manual(values = palette) +
+  # Apply custom fill colors
+  theme_minimal() +
+  # Clean plot theme
+  labs(
+    title = "CVA of Euroscaptor species discrimination",
+    x = "Canonical Variate 1",
+    y = "Canonical Variate 2"
+  ) +
+  theme(
+    # Customize grid appearance for better readability
+    panel.grid.major = element_line(color = "gray", size = 0.5),
+    panel.grid.minor = element_blank(),
+    # Remove minor grid lines for cleaner look
+    panel.grid.major.x = element_line(color = "gray", size = 0.5, linetype = "dotted"),
+    panel.grid.major.y = element_line(color = "gray", size = 0.5, linetype = "dotted"),
+    panel.background = element_blank(),
+    # Remove panel background
+    plot.background = element_blank()
+    # Remove plot background
+  )
+```
+
+
+# 2.4 semilandmark-based analyses PCA and CVA
+```{r}
+# Test landmark analysis approach as alternative to outline analysis
+pile(outlines_combined2)
+# Display outlines stacked for landmark placement assessment
+
+
+# Perform full Generalized Procrustes Analysis on landmark data
+# This aligns, scales, and rotates specimens to minimize shape differences
+outlines_100pts <- coo_sample(outlines_combined2, 100)
+
+# Perform Generalized Procrustes Analysis
+w.al <- fgProcrustes(outlines_100pts)
+
+
+# Display aligned specimens with first specimen as reference
+w.al %>%
+  coo_slide(id = 1) %>%
+  # Slide to use specimen 1 as reference alignment
+  stack()
+# Stack all aligned specimens for visual inspection
+
+# Display aligned specimens in stacked format
+pile(w.al)
+
+# Extract coordinate matrices and convert to PCA-suitable format
+# Transform each specimen's coordinate matrix into a single vector for multivariate analysis
+all_matrices <- lapply(w.al[[1]], function(mat) as.vector(t(mat)))
+# Convert matrices to vectors and transpose
+combined_matrix <- do.call(rbind, all_matrices)
+# Combine all specimen vectors into analysis matrix
+
+# Extract specimen metadata (species information)
+sample_info <- w.al[[2]]
+
+# Perform Principal Component Analysis on Procrustes-aligned coordinate data
+pca_result <- prcomp(combined_matrix, scale. = TRUE)
+
+# Integrate PCA results with specimen taxonomic information
+pca_data <- data.frame(pca_result$x, species = sample_info$species)
+
+
+# Find convex hull points that enclose all points within each group
+hull_data <- pca_data %>%
+  group_by(sample_info$species) %>%
+  slice(chull(PC1, PC2))
+
+# Create PCA plot of Procrustes-aligned landmark coordinates
+pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
+
+  # Step A: Plot scatter points (same as previous code)
+  geom_point(aes(color = species), size = 3) +
+
+  # Step B: Add convex hull polygons
+  # 'data = hull_data' -> Use the convex hull data we just created
+  # 'aes(fill = species)' -> Make polygon fill colors match by species
+  # 'alpha = 0.2' -> Set to semi-transparent
+  # 'color = NA' -> Remove polygon outline
+  geom_polygon(
+    data = hull_data,
+    aes(fill = species, group = species),
+    alpha = 0.2,
+    color = NA,
+    show.legend = FALSE
+    # Don't need polygon legend (scatter points already have it)
+  ) +
+
+  # Step C: Add title and theme
+  labs(
+    title = "PCA of Procrustes-aligned Euroscaptor landmark coordinates",
+    x = "Principal Component 1",
+    y = "Principal Component 2"
+  ) +
+  theme_minimal()
+
+# Optional: If 'palette' variable is defined, can add here:
+# scale_color_manual(values = palette) +
+# scale_fill_manual(values = palette)
+
+# Display the plot
+print(pca_plot_procrustes)
+
+
+# Canonical Variate Analysis on landmark coordinate data
+# CVA performs supervised classification to maximize between-group differences
+bot.cva <- CVA(combined_matrix, sample_info$species)
+
+# Extract canonical variate scores (discriminant function coordinates)
+cva_scores <- bot.cva$CVscores
+
+# Create comprehensive data frame with all canonical variates and species labels
+df <- data.frame(
+  CV1 = cva_scores[, 1],
+  # First canonical variate (primary discrimination axis)
+  CV2 = cva_scores[, 2],
+  # Second canonical variate (secondary discrimination axis)
+  Species = sample_info$species
+  # Species classification labels
+)
+
+# Convert to tibble for modern data manipulation
+df_tbl <- as_tibble(df)
+
+
+# Calculate convex hull data in CVA space
+cva_hull_data <- df_tbl %>%
+  group_by(Species) %>%
+  slice(chull(CV1, CV2))
+
+# Create CVA plot with convex hulls
+cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
+  # Step A: Plot scatter points
+  geom_point(aes(color = Species), size = 3) +
+  # Increase size=3 to match previous PCA plots
+
+  # Step B: Add convex hull polygons
+  # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
+  # 'aes(fill = Species)' -> Make polygon fill colors match by species
+  # 'alpha = 0.2' -> Set to semi-transparent
+  # 'color = NA' -> Remove polygon outline
+  geom_polygon(
+    data = cva_hull_data,
+    aes(fill = Species, group = Species),
+    alpha = 0.2,
+    color = NA,
+    show.legend = FALSE
+    # Remove polygon legend
+  ) +
+
+  # Step C: Add title and theme
+  theme_minimal() +
+  # Clean plot appearance
+  labs(
+    title = "CVA of Euroscaptor Landmark-based Species Discrimination (with Convex Hulls)",
+    x = "Canonical Variate 1",
+    y = "Canonical Variate 2"
+  )
+
+# Display CVA plot
+print(cva_plot_hull)
+```
+
+
+# 2.5 Save Results
+
+```{r}
+# Save current workspace containing both Parascaptor and Euroscaptor analyses
+save.image(file = "./geometric_morphometrics/R_Data/Euroscaptor_skull_ventral.RData")
+```
+
+# Analysis Complete
+
+# This analysis workflow demonstrates:
+#    Outline extraction and processing for morphometric analysis
+#    Elliptic Fourier Analysis for shape quantification
+#    Principal Component Analysis for morphospace visualization
+#    Canonical Variate Analysis for species discrimination
+#    Landmark-based geometric morphometrics as alternative approach
+
+
