@@ -35,12 +35,12 @@ library(patchwork) # For combining plots
 ```
 
 
-# 1 Parascaptor Ventral cranium 
+# 1 Parascaptor Ventral cranium
 # 1.1 prepare data
 
 ```{r}
 # Set working directory and define file paths for Parascaptor data
-setwd("/Users/anlong/Documents/同步空间/Project_Code/Project/mole_project/Hidden-diversity-talpid-moles_supplemnt-material")
+setwd("./Hidden-diversity-talpid-moles_supplemnt-material")
 # Input directory containing original JPG images
 inpath <- file.path("./geometric morphometrics/Parascaptor_V_JPG")
 
@@ -353,46 +353,39 @@ pca_result <- prcomp(combined_matrix, scale. = TRUE)
 # Integrate PCA results with specimen taxonomic information
 pca_data <- data.frame(pca_result$x, species = sample_info$species)
 
+# Ensure species factor levels match the order from EFA analysis
+pca_data$species <- factor(pca_data$species, levels = levels(bot.p$fac$species))
 
 # Find convex hull points that enclose all points within each group
 hull_data <- pca_data %>%
-  group_by(sample_info$species) %>%
+  group_by(species) %>%
   slice(chull(PC1, PC2))
 
 # Create PCA plot of Procrustes-aligned landmark coordinates
-pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
-
-  # Step A: Plot scatter points (same as previous code)
-  geom_point(aes(color = species), size = 3) +
-
-  # Step B: Add convex hull polygons
-  # 'data = hull_data' -> Use the convex hull data we just created
-  # 'aes(fill = species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> Remove polygon outline
+pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2, color = species)) +
+  geom_point(size = 3) +
+  # Plot individual specimens as points
+  # Add semi-transparent polygons showing species clusters
   geom_polygon(
     data = hull_data,
     aes(fill = species, group = species),
     alpha = 0.2,
-    color = NA,
-    show.legend = FALSE
-    # Don't need polygon legend (scatter points already have it)
+    color = NA
   ) +
-
-  # Step C: Add title and theme
+  scale_color_manual(values = palette) +
+  # Apply custom colors to points
+  scale_fill_manual(values = palette) +
+  # Apply custom colors to polygons
+  theme_minimal() +
+  # Clean plot theme
   labs(
     title = "PCA of Procrustes-aligned landmark coordinates",
     x = "Principal Component 1",
     y = "Principal Component 2"
-  ) +
-  theme_minimal()
-
-# Optional: If 'palette' variable is defined, can add here:
-# scale_color_manual(values = palette) +
-# scale_fill_manual(values = palette)
+  )
 
 # Display the plot
-print(pca_plot_procrustes)
+pca_plot_procrustes
 
 
 # Canonical Variate Analysis on landmark coordinate data
@@ -408,42 +401,38 @@ df <- data.frame(
   # First canonical variate (primary discrimination axis)
   CV2 = cva_scores[, 2],
   # Second canonical variate (secondary discrimination axis)
-  Species = sample_info$species
+  species = sample_info$species
   # Species classification labels
 )
 
 # Convert to tibble for modern data manipulation
 df_tbl <- as_tibble(df)
 
+# Ensure species factor levels match the order from EFA analysis
+df_tbl$species <- factor(df_tbl$species, levels = levels(bot.p$fac$species))
 
 # Calculate convex hull data in CVA space
 cva_hull_data <- df_tbl %>%
-  group_by(Species) %>%
+  group_by(species) %>%
   slice(chull(CV1, CV2))
 
 # Create CVA plot with convex hulls
-cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
-  # Step A: Plot scatter points
-  geom_point(aes(color = Species), size = 3) +
-  # Increase size=3 to match previous PCA plots
-
-  # Step B: Add convex hull polygons
-  # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
-  # 'aes(fill = Species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> Remove polygon outline
+cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
+  geom_point(size = 3) +
+  # Plot specimens as colored points
+  # Add semi-transparent species group polygons
   geom_polygon(
     data = cva_hull_data,
-    aes(fill = Species, group = Species),
+    aes(fill = species, group = species),
     alpha = 0.2,
-    color = NA,
-    show.legend = FALSE
-    # Remove polygon legend
+    color = NA
   ) +
-
-  # Step C: Add title and theme
+  scale_color_manual(values = palette) +
+  # Apply custom point colors
+  scale_fill_manual(values = palette) +
+  # Apply custom fill colors
   theme_minimal() +
-  # Clean plot appearance
+  # Clean plot theme
   labs(
     title = "CVA of Landmark-based Species Discrimination (with Convex Hulls)",
     x = "Canonical Variate 1",
@@ -451,11 +440,11 @@ cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
   )
 
 # Display CVA plot
-print(cva_plot_hull)
+cva_plot_hull
 ```
 
 
-# 1.5 save 
+# 1.5 save
 ```{r}
 # Save current workspace with Parascaptor analysis results
 save.image(file = "./geometric_morphometrics/R_Data/Parascaptor_skull_ventral.RData")
@@ -467,7 +456,7 @@ save.image(file = "./geometric_morphometrics/R_Data/Parascaptor_skull_ventral.RD
 
 ```{r}
 # Set working directory and define file paths for Parascaptor data
-setwd("/Users/anlong/Documents/同步空间/Project_Code/Project/mole_project/Hidden-diversity-talpid-moles_supplemnt-material")
+setwd("./Hidden-diversity-talpid-moles_supplemnt-material")
 # Input directory containing Euroscaptor ventral cranial JPG images
 inpath <- file.path("./geometric_morphometrics/Euroscaptor_V_JPG")
 # Output directory for processed individual specimens
@@ -568,8 +557,8 @@ class(bot.p)
 # Convert species labels to factors for proper grouping
 bot.p$fac$species <- as.factor(bot.p$fac$species)
 
-# Generate color palette matching number of species groups
-palette <- pal_qual_Paired(length(levels(bot.p$fac$species)))
+# Define color palette for consistent visualization (matching Euroscaptor.R)
+palette <- c("#A6CEE3FF", "#1F78B4FF", "#B2DF8AFF", "#33A02CFF", "#FB9A99FF", "#E31A1CFF", "#FDBF6FFF", "#FF7F00FF", "#CAB2D6FF")
 
 # Extract PCA coordinates and add species information
 pca_scores <- as.data.frame(bot.p$x)
@@ -643,8 +632,8 @@ hull_data <- df_tbl %>%
 # Convert hull data to proper plotting format
 hull_data <- bind_rows(hull_data$hull)
 
-# Select specific colors from palette for consistent visualization
-palette <- pal_qual_Paired(9)[c(1, 2, 5, 6, 9)]
+# Define color palette for consistent visualization (matching Euroscaptor.R)
+palette <- c("#A6CEE3FF", "#1F78B4FF", "#B2DF8AFF", "#33A02CFF", "#FB9A99FF", "#E31A1CFF", "#FDBF6FFF", "#FF7F00FF", "#CAB2D6FF")
 
 # Create CVA discrimination plot for Euroscaptor species separation
 cva_plot <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
@@ -722,46 +711,42 @@ pca_result <- prcomp(combined_matrix, scale. = TRUE)
 # Integrate PCA results with specimen taxonomic information
 pca_data <- data.frame(pca_result$x, species = sample_info$species)
 
+# Ensure species factor levels match the order from EFA analysis
+pca_data$species <- factor(pca_data$species, levels = levels(bot.p$fac$species))
+
+# Define color palette for consistent visualization (matching Euroscaptor.R)
+palette <- c("#A6CEE3FF", "#1F78B4FF", "#B2DF8AFF", "#33A02CFF", "#FB9A99FF", "#E31A1CFF", "#FDBF6FFF", "#FF7F00FF", "#CAB2D6FF")
 
 # Find convex hull points that enclose all points within each group
 hull_data <- pca_data %>%
-  group_by(sample_info$species) %>%
+  group_by(species) %>%
   slice(chull(PC1, PC2))
 
 # Create PCA plot of Procrustes-aligned landmark coordinates
-pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
-
-  # Step A: Plot scatter points (same as previous code)
-  geom_point(aes(color = species), size = 3) +
-
-  # Step B: Add convex hull polygons
-  # 'data = hull_data' -> Use the convex hull data we just created
-  # 'aes(fill = species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> Remove polygon outline
+pca_plot_procrustes <- ggplot(pca_data, aes(x = PC1, y = PC2, color = species)) +
+  geom_point(size = 3) +
+  # Plot specimens as colored points
+  # Add species cluster polygons with transparency
   geom_polygon(
     data = hull_data,
     aes(fill = species, group = species),
     alpha = 0.2,
-    color = NA,
-    show.legend = FALSE
-    # Don't need polygon legend (scatter points already have it)
+    color = NA
   ) +
-
-  # Step C: Add title and theme
+  scale_color_manual(values = palette) +
+  # Apply species-specific colors
+  scale_fill_manual(values = palette) +
+  # Apply matching fill colors
+  theme_minimal() +
+  # Clean plot appearance
   labs(
     title = "PCA of Procrustes-aligned Euroscaptor landmark coordinates",
     x = "Principal Component 1",
     y = "Principal Component 2"
-  ) +
-  theme_minimal()
-
-# Optional: If 'palette' variable is defined, can add here:
-# scale_color_manual(values = palette) +
-# scale_fill_manual(values = palette)
+  )
 
 # Display the plot
-print(pca_plot_procrustes)
+pca_plot_procrustes
 
 
 # Canonical Variate Analysis on landmark coordinate data
@@ -777,42 +762,41 @@ df <- data.frame(
   # First canonical variate (primary discrimination axis)
   CV2 = cva_scores[, 2],
   # Second canonical variate (secondary discrimination axis)
-  Species = sample_info$species
+  species = sample_info$species
   # Species classification labels
 )
 
 # Convert to tibble for modern data manipulation
 df_tbl <- as_tibble(df)
 
+# Ensure species factor levels match the order from EFA analysis
+df_tbl$species <- factor(df_tbl$species, levels = levels(bot.p$fac$species))
+
+# Define color palette for consistent visualization (matching Euroscaptor.R)
+palette <- c("#A6CEE3FF", "#1F78B4FF", "#B2DF8AFF", "#33A02CFF", "#FB9A99FF", "#E31A1CFF", "#FDBF6FFF", "#FF7F00FF", "#CAB2D6FF")
 
 # Calculate convex hull data in CVA space
 cva_hull_data <- df_tbl %>%
-  group_by(Species) %>%
+  group_by(species) %>%
   slice(chull(CV1, CV2))
 
 # Create CVA plot with convex hulls
-cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
-  # Step A: Plot scatter points
-  geom_point(aes(color = Species), size = 3) +
-  # Increase size=3 to match previous PCA plots
-
-  # Step B: Add convex hull polygons
-  # 'data = cva_hull_data' -> Use the CVA convex hull data we just created
-  # 'aes(fill = Species)' -> Make polygon fill colors match by species
-  # 'alpha = 0.2' -> Set to semi-transparent
-  # 'color = NA' -> Remove polygon outline
+cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2, color = species)) +
+  geom_point(size = 3, alpha = 0.8) +
+  # Plot specimens as colored points
+  # Add semi-transparent species group polygons
   geom_polygon(
     data = cva_hull_data,
-    aes(fill = Species, group = Species),
+    aes(fill = species, group = species),
     alpha = 0.2,
-    color = NA,
-    show.legend = FALSE
-    # Remove polygon legend
+    color = NA
   ) +
-
-  # Step C: Add title and theme
+  scale_color_manual(values = palette) +
+  # Apply custom point colors
+  scale_fill_manual(values = palette) +
+  # Apply custom fill colors
   theme_minimal() +
-  # Clean plot appearance
+  # Clean plot theme
   labs(
     title = "CVA of Euroscaptor Landmark-based Species Discrimination (with Convex Hulls)",
     x = "Canonical Variate 1",
@@ -820,7 +804,7 @@ cva_plot_hull <- ggplot(df_tbl, aes(x = CV1, y = CV2)) +
   )
 
 # Display CVA plot
-print(cva_plot_hull)
+cva_plot_hull
 ```
 
 
