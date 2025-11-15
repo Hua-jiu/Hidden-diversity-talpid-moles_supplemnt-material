@@ -28,13 +28,13 @@ This directory contains supplementary data and code for the paper "Unraveling hi
 
 ## Measurement-Based Morphometrics
 - Main scripts: `measurement-based_morphometrics/Parascaptor.R`, `Euroscaptor.R`
-  - Includes data import, cleaning, PCA, CVA (PCA + LDA), convex hull visualization, etc.
+  - Includes data import, cleaning, PCA, CVA, convex hull visualization, etc.
 - Data tables: `*.xlsx`, e.g., `para_log10.xlsx`, `euroscaptor_1023.xlsx`.
 - Required R packages: `dplyr`, `ggplot2`, `readxl`, `Morpho`, `MASS`, `tidyr`.
 
 ## Data Notes
-- Image file naming convention: `Genus#species#specimenID#source#s#v[##_flags].jpg`
-  - `#s#v` indicates ventral skull view; flags like `#p` or `_pseudo_no_1` denote processed variants.
+- Image file naming convention: `Genus#species#specimenID#source#s#v.jpg`
+  - `#s#v` indicates ventral skull view; flags like `#p` denote broken skull.
 - Processed outputs in `*_OUT/` are one-to-one with input images for outline extraction.
 - Measurement tables are in Excel format, including both raw and transformed data.
 
